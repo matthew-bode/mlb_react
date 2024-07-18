@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/mlb_react/static/css/main.02e1d9a6.css",
+    "main.js": "/mlb_react/static/js/main.deeee56c.js",
+    "index.html": "/mlb_react/index.html",
+    "main.02e1d9a6.css.map": "/mlb_react/static/css/main.02e1d9a6.css.map",
+    "main.deeee56c.js.map": "/mlb_react/static/js/main.deeee56c.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.02e1d9a6.css",
+    "static/js/main.deeee56c.js"
+  ]
+}
