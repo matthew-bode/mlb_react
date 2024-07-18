@@ -1,0 +1,8 @@
+.navBarDiv {
+    position: absolute;
+    left: 15rem;
+    top: 10rem;
+    width: calc(100% - 30rem);
+    height: 2rem;
+    border: 1px solid black;
+}
