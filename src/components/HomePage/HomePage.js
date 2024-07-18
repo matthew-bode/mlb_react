@@ -35,18 +35,15 @@ const HomePage = () => {
     GetSchedules();
   }, []);
 
-  console.log('schedule', schedule);
+  console.log("schedule", schedule);
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  if (error) {
-    return <div>Error: {error.message}</div>;
-  }
-
   return (
     <div className={css.mainHomePageDiv}>
+      {error && <div>Error: {error.message}</div>}
       <Header />
       <LeftPanel />
       <MainSection schedule={schedule} />
