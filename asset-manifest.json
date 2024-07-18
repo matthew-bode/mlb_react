@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/mlb_react/static/css/main.02e1d9a6.css",
-    "main.js": "/mlb_react/static/js/main.d2acf545.js",
+    "main.js": "/mlb_react/static/js/main.d8268b1b.js",
     "index.html": "/mlb_react/index.html",
     "main.02e1d9a6.css.map": "/mlb_react/static/css/main.02e1d9a6.css.map",
-    "main.d2acf545.js.map": "/mlb_react/static/js/main.d2acf545.js.map"
+    "main.d8268b1b.js.map": "/mlb_react/static/js/main.d8268b1b.js.map"
   },
   "entrypoints": [
     "static/css/main.02e1d9a6.css",
-    "static/js/main.d2acf545.js"
+    "static/js/main.d8268b1b.js"
   ]
 }
