@@ -88,7 +88,7 @@ const HitterVsPitcher = ({ schedule }) => {
                   obp: batter[9],
                   ops: batter[11],
                 };
-                if (batter[0] >= 10) {
+                if (batter[0] >= 6) {
                   newRows.push(rowData);
                 }
               }

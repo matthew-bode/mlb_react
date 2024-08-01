@@ -4,9 +4,9 @@ import css from "./HomePage.module.css";
 import Header from "../Header/Header.js";
 import LeftPanel from "../LeftPanel/LeftPanel.js";
 import RightPanel from "../RightPanel/RightPanel";
-import MainSection from "../MainSection/MainSection";
+import MainSection from "../Main/MainSection";
 
-const today = 20240719;
+const today = 20240801;
 
 const HomePage = () => {
   const [schedule, setSchedule] = useState([]);
@@ -39,6 +39,10 @@ const HomePage = () => {
 
   if (loading) {
     return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error.message}</div>;
   }
 
   return (

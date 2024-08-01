@@ -1,11 +1,12 @@
 import css from './Header.module.css';
+import Matchup from './Matchup/Matchup';
 
 const Header = () => {
     const test = '';
 
     return (
         <div className={css.mainHeaderDiv}>
-            'Content Goes Here'
+            <Matchup />
         </div>
     )
 }
