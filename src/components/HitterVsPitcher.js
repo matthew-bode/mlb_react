@@ -11,68 +11,6 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
   const [matchUps, setMatchUps] = useState([]);
 
   useEffect(() => {
-    fetch("/mlb/team/roster/_/name/bal/baltimore-orioles")
-      .then((response) => response.text())
-      .then((html) => {
-        // Initialize the DOM parser
-        const parser = new DOMParser();
-
-        // Parse the text into a DOM document
-        const doc = parser.parseFromString(html, "text/html");
-
-        const positions = ["Pitchers", "Catchers", "Infielders", "Outfielders", "Designated Hitter"];
-        let pitcherIds = [];
-        let hitterIds = [];
-
-        for (let p = 0; p < positions.length; p++) {
-          // Find the <div> with the text content for each position
-          const positionDiv = Array.from(doc.querySelectorAll("div")).find(
-            (div) => div.textContent.trim() === positions[p]
-          );
-
-          console.log('positionDiv', positionDiv);
-          
-          // If the <div> is found, get all <a> tags after it
-          let playerLinks = [];
-          if (positionDiv) {
-            let sibling = positionDiv.nextElementSibling;
-            let links = sibling.getElementsByTagName("a");
-  
-            for (let link of links) {
-              playerLinks.push(link.href);
-            }
-
-            // Remove duplicates from playerLinks and extract the values after "id/"
-            const playerIds = Array.from(new Set(playerLinks))
-              .filter((href) =>
-                href.includes("https://www.espn.com/mlb/player/_/id/")
-              )
-              .map((href) => href.split("id/")[1]);
-  
-            if (positions[p] === 'Pitchers') {
-              for (let n = 0; n < playerIds.length; n++) {
-                pitcherIds.push(playerIds[n]);
-              }
-            } else {
-              for (let h = 0; h < playerIds.length; h++) {
-                hitterIds.push(playerIds[h]);
-              }
-            }
-    
-            // Log the unique player IDs
-            console.log('pitcherIds', pitcherIds);
-            console.log('hitterIds', hitterIds);
-          }
-        }
-
-
-      })
-      .catch((err) => {
-        console.log("Failed to fetch page: ", err);
-      });
-  }, []);
-
-  useEffect(() => {
     if (schedule !== null) {
       const newMatchUps = [];
       var keys = Object.keys(schedule);
