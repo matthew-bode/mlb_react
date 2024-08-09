@@ -2,21 +2,21 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 
-const today = 20240719;
-
-const HitterVsPitcher = ({ schedule, generateTable }) => {
+const HitterVsPitcher = ({ schedule, generateTable, playerIds }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [matchUps, setMatchUps] = useState([]);
 
-  useEffect(() => {
+  useEffect(async () => {
     if (schedule !== null) {
       const newMatchUps = [];
       var keys = Object.keys(schedule);
       for (let n = 0; n < keys.length; n++) {
         let homePitcher = null;
+        let homePitcherHand = null;
         let awayPitcher = null;
+        let awayPitcherHand = null;
         let homeTeam = null;
         let awayTeam = null;
         let homeTeamAbr = "";
@@ -27,11 +27,21 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
         if (homePitcherURL) {
           const urlSplit = homePitcherURL.split("/id/");
           homePitcher = urlSplit[1] ?? null;
+          const homePitcherData = await axios.get(
+            `https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/${homePitcher}`
+          );
+          const batsThrows = homePitcherData.data.athlete.displayBatsThrows;
+          homePitcherHand = batsThrows.split('/')[1];
         }
         const awayPitcherURL = schedule[keys[n]].competitors[1]?.probable?.href;
         if (awayPitcherURL) {
           const urlSplit = awayPitcherURL.split("/id/");
           awayPitcher = urlSplit[1] ?? null;
+          const awayPitcherData = await axios.get(
+            `https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/${awayPitcher}`
+          );
+          const batsThrows = awayPitcherData.data.athlete.displayBatsThrows;
+          awayPitcherHand = batsThrows.split('/')[1];
         }
         homeTeam = schedule[keys[n]].competitors[0]?.id;
         awayTeam = schedule[keys[n]].competitors[1]?.id;
@@ -43,6 +53,7 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
         newMatchUps.push(
           {
             pitcher: homePitcher,
+            pitcherThrows: homePitcherHand,
             team: awayTeam,
             batterLogo: awayLogo,
             pitcherLogo: homeLogo,
@@ -52,6 +63,7 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
           },
           {
             pitcher: awayPitcher,
+            pitcherThrows: awayPitcherHand,
             team: homeTeam,
             batterLogo: homeLogo,
             pitcherLogo: awayLogo,
@@ -73,11 +85,16 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
         const newRows = [];
         const seasonStats = [];
         const venueStats = [];
+        const throwHandStats = [];
         const sevenDaysStats = [];
         const fifteenDaysStats = [];
         const thirtyDaysStats = [];
         for (let i = 0; i < matchUps.length; i++) {
           if (matchUps[i].pitcher) {
+            const batterIdIndex = playerIds.findIndex(
+              (x) => x.team === matchUps[i].batterTeam
+            );
+            const batterIds = playerIds[batterIdIndex].hitterIds;
             const response = await axios.get(
               `https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/${matchUps[i].pitcher}/vsathlete?region=us&lang=en&contentorigin=espn&teamId=${matchUps[i].team}`
             );
@@ -88,10 +105,12 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
               const pitcherStringSplit = pitcherString.split("vs. ");
               const pitcher = pitcherStringSplit[1] ?? "";
               const venue = matchUps[i].venue;
+              const pitcherThrowHand = matchUps[i].pitcherThrows;
+              const RorL = pitcherThrowHand.charAt(0);
               for (let j = 0; j < players.length; j++) {
                 const batter = players[j].stats;
-                const batterLogo = matchUps[i]?.batterLogo ?? "";
-                const pitcherLogo = matchUps[i]?.pitcherLogo ?? "";
+                // const batterLogo = matchUps[i]?.batterLogo ?? "";
+                // const pitcherLogo = matchUps[i]?.pitcherLogo ?? "";
                 const batterTeam = matchUps[i]?.batterTeam ?? "";
                 const pitcherTeam = matchUps[i]?.pitcherTeam ?? "";
                 const playerIdString = players[j].uid;
@@ -115,6 +134,10 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
                   battingAvg: batter[8],
                   obp: batter[9],
                   ops: batter[11],
+                  pitcherThrowHand: RorL,
+                  throwHandBattingAvg: -1,
+                  throwHandObp: -1,
+                  throwHandOps: -1,
                   sevDayBattingAvg: -1,
                   sevDayObp: -1,
                   sevDayOps: -1,
@@ -132,6 +155,7 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
                   seasonPercentile: -1,
                   venuePercentile: -1,
                   totalDaysPercentile: -1,
+                  throwHandPercentile: -1,
                   vsPitcherBAPctl: -1,
                   vsPitcherOBPPctl: -1,
                   vsPitcherOPSPctl: -1,
@@ -194,6 +218,39 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
                     venueOPSPctl: -1,
                   };
                   venueStats.push(venueRowData);
+
+                  // vs right/left
+                  const throwHandArray = playerData.data.splitCategories[1].splits;
+                  const displayName = matchUps[i].pitcherThrows = 'right' ? 'vs. Right' : 'vs. Left';
+                  const throwHandIndex = throwHandArray.findIndex(
+                    (x) => x.displayName === displayName
+                  );
+                  let throwHandData = [];
+                  if (throwHandIndex > -1) {
+                    throwHandData = throwHandArray[throwHandIndex].stats;
+                  }
+                  const throwHandRowData = {
+                    id: playerId,
+                    atBats: throwHandData[0] ?? 0,
+                    hits: throwHandData[2] ?? 0,
+                    doubles: throwHandData[3] ?? 0,
+                    triples: throwHandData[4] ?? 0,
+                    homeRuns: throwHandData[5] ?? 0,
+                    rbi: throwHandData[6] ?? 0,
+                    walks: throwHandData[7] ?? 0,
+                    strikeouts: throwHandData[9] ?? 0,
+                    battingAvg: throwHandData[12] ?? 0,
+                    obp: throwHandData[13] ?? 0,
+                    ops: throwHandData[15] ?? 0,
+                    percentile: -1,
+                    throwHandBAPctl: -1,
+                    throwHandOBPPctl: -1,
+                    throwHandOPSPctl: -1,
+                  };
+                  throwHandStats.push(throwHandRowData);
+                  rowData.throwHandBattingAvg = throwHandData[12] ?? "-";
+                  rowData.throwHandObp = throwHandData[13] ?? "-";
+                  rowData.throwHandOps = throwHandData[15] ?? "-";
 
                   const splitsByDays =
                     playerData.data.splitCategories[2].splits;
@@ -316,6 +373,9 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
         let validVenueStats = venueStats
           .filter((x) => x.atBats > 0)
           .sort((a, b) => b.battingAvg - a.battingAvg);
+        let validThrowHandStats = throwHandStats
+          .filter((x) => x.atBats > 0)
+          .sort((a, b) => b.battingAvg - a.battingAvg);
         let validSevenDaysStats = sevenDaysStats
           .filter((x) => x.atBats > 0)
           .sort((a, b) => b.battingAvg - a.battingAvg);
@@ -335,6 +395,9 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
             (x) => x.id === playerId
           );
           const venueIndex = validVenueStats.findIndex(
+            (x) => x.id === playerId
+          );
+          const throwHandIndex = validThrowHandStats.findIndex(
             (x) => x.id === playerId
           );
           const sevenDaysIndex = validSevenDaysStats.findIndex(
@@ -371,6 +434,14 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
               100;
             const rowIndex = venueStats.findIndex((x) => x.id === playerId);
             venueStats[rowIndex].venueBAPctl = venueBAPctl;
+          }
+          if (throwHandIndex > -1) {
+            const throwHandBAPctl =
+              ((validThrowHandStats.length - (throwHandIndex + 1)) /
+                validThrowHandStats.length) *
+              100;
+            const rowIndex = throwHandStats.findIndex((x) => x.id === playerId);
+            throwHandStats[rowIndex].throwHandBAPctl = throwHandBAPctl;
           }
           if (sevenDaysIndex > -1) {
             const sevenDaysBAPctl =
@@ -412,6 +483,9 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
         validVenueStats = venueStats
           .filter((x) => x.atBats > 0)
           .sort((a, b) => b.obp - a.obp);
+        validThrowHandStats = throwHandStats
+          .filter((x) => x.atBats > 0)
+          .sort((a, b) => b.obp - a.obp);
         validSevenDaysStats = sevenDaysStats
           .filter((x) => x.atBats > 0)
           .sort((a, b) => b.obp - a.obp);
@@ -431,6 +505,9 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
             (x) => x.id === playerId
           );
           const venueIndex = validVenueStats.findIndex(
+            (x) => x.id === playerId
+          );
+          const throwHandIndex = validThrowHandStats.findIndex(
             (x) => x.id === playerId
           );
           const sevenDaysIndex = validSevenDaysStats.findIndex(
@@ -467,6 +544,14 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
               100;
             const rowIndex = venueStats.findIndex((x) => x.id === playerId);
             venueStats[rowIndex].venueOBPPctl = venueOBPPctl;
+          }
+          if (throwHandIndex > -1) {
+            const throwHandOBPPctl =
+              ((validThrowHandStats.length - (throwHandIndex + 1)) /
+                validThrowHandStats.length) *
+              100;
+            const rowIndex = throwHandStats.findIndex((x) => x.id === playerId);
+            throwHandStats[rowIndex].throwHandOBPPctl = throwHandOBPPctl;
           }
           if (sevenDaysIndex > -1) {
             const sevenDaysOBPPctl =
@@ -508,6 +593,9 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
         validVenueStats = venueStats
           .filter((x) => x.atBats > 0)
           .sort((a, b) => b.ops - a.ops);
+        validThrowHandStats = throwHandStats
+          .filter((x) => x.atBats > 0)
+          .sort((a, b) => b.ops - a.ops);
         validSevenDaysStats = sevenDaysStats
           .filter((x) => x.atBats > 0)
           .sort((a, b) => b.ops - a.ops);
@@ -527,6 +615,9 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
             (x) => x.id === playerId
           );
           const venueIndex = validVenueStats.findIndex(
+            (x) => x.id === playerId
+          );
+          const throwHandIndex = validThrowHandStats.findIndex(
             (x) => x.id === playerId
           );
           const sevenDaysIndex = validSevenDaysStats.findIndex(
@@ -563,6 +654,14 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
               100;
             const rowIndex = venueStats.findIndex((x) => x.id === playerId);
             venueStats[rowIndex].venueOPSPctl = venueOPSPctl;
+          }
+          if (throwHandIndex > -1) {
+            const throwHandOPSPctl =
+              ((validThrowHandStats.length - (throwHandIndex + 1)) /
+                validThrowHandStats.length) *
+              100;
+            const rowIndex = throwHandStats.findIndex((x) => x.id === playerId);
+            throwHandStats[rowIndex].throwHandOPSPctl = throwHandOPSPctl;
           }
           if (sevenDaysIndex > -1) {
             const sevenDaysOPSPctl =
@@ -615,6 +714,11 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
           venuePctlArray.filter((x) => x > -1);
           const venuePctl = venuePctlArray.length > 0 ? (venuePctlArray.reduce((accumulator, currentValue) => accumulator + currentValue, 0) / venuePctlArray.length) : -1;
 
+          // Throw Hand
+          const throwHandPctlArray = [throwHandStats[p].throwHandBAPctl, throwHandStats[p].throwHandOBPPctl, throwHandStats[p].throwHandOPSPctl];
+          throwHandPctlArray.filter((x) => x > -1);
+          const throwHandPctl = throwHandPctlArray.length > 0 ? (throwHandPctlArray.reduce((accumulator, currentValue) => accumulator + currentValue, 0) / throwHandPctlArray.length) : -1;
+
           // recent days
           // seven days
           const sevenDaysPctlArray = [sevenDaysStats[p].sevenDaysBAPctl, sevenDaysStats[p].sevenDaysOBPPctl, sevenDaysStats[p].sevenDaysOPSPctl];
@@ -639,6 +743,7 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
 
           const validPercentiles = [
             vsPitcherPctl,
+            throwHandPctl,
             totalDaysPctl,
             seasonPctl,
             venuePctl,
@@ -661,6 +766,7 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
           newRows[p].seasonPercentile = seasonPctl;
           newRows[p].venuePercentile = venuePctl;
           newRows[p].totalDaysPercentile = totalDaysPctl;
+          newRows[p].throwHandPercentile = throwHandPctl;
         }
         setData(newRows);
       } catch (error) {
@@ -720,6 +826,10 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
     { field: "battingAvg", headerName: "BA", width: 60 },
     { field: "obp", headerName: "OB%", width: 60 },
     { field: "ops", headerName: "OPS", width: 60 },
+    { field: "pitcherThrowHand", headerName: "R/L", width: 20 },
+    { field: "throwHandBattingAvg", headerName: "BA", width: 60 },
+    { field: "throwHandObp", headerName: "OB%", width: 60 },
+    { field: "throwHandOps", headerName: "OPS", width: 60 },
     { field: "sevDayBattingAvg", headerName: "BA", width: 60 },
     { field: "sevDayObp", headerName: "OB%", width: 60 },
     { field: "sevDayOps", headerName: "OPS", width: 60 },
@@ -733,10 +843,11 @@ const HitterVsPitcher = ({ schedule, generateTable }) => {
     { field: "seasonObp", headerName: "OB%", width: 60 },
     { field: "seasonOps", headerName: "OPS", width: 60 },
     { field: "percentile", headerName: "Pctl", width: 60 },
-    { field: "vsPercentile", headerName: "vs", width: 60 },
-    { field: "seasonPercentile", headerName: "Season", width: 60 },
-    { field: "venuePercentile", headerName: "venue", width: 60 },
-    { field: "totalDaysPercentile", headerName: "total Days", width: 60 },
+    // { field: "vsPercentile", headerName: "vs", width: 60 },
+    // { field: "throwHandPercentile", headerName: "R/L", width: 60 },
+    // { field: "seasonPercentile", headerName: "Season", width: 60 },
+    // { field: "venuePercentile", headerName: "venue", width: 60 },
+    // { field: "totalDaysPercentile", headerName: "total Days", width: 60 },
   ];
 
   return (

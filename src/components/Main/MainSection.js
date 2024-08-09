@@ -94,7 +94,7 @@ const MainSection = ({ schedule }) => {
             <NavBar />
             <div className={css.mainMainSectionDiv}>
                 'Main Section'
-                <HitterVsPitcher schedule={schedule} generateTable={trigger} />
+                <HitterVsPitcher schedule={schedule} generateTable={trigger} playerIds={playerIds} />
                 <button onClick={handleClick} disabled={!readyToPull}>Generate Table</button>
                 <button onClick={pullPlayerIds}>Pull Players</button>
             </div>
