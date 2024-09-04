@@ -6,7 +6,7 @@ import LeftPanel from "../LeftPanel/LeftPanel.js";
 import RightPanel from "../RightPanel/RightPanel";
 import MainSection from "../Main/MainSection";
 
-const today = 20240819;
+const today = 20240904;
 
 const HomePage = () => {
   const [schedule, setSchedule] = useState([]);

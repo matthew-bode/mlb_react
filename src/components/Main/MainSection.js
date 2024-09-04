@@ -1,15 +1,23 @@
 import css from './MainSection.module.css';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import NavBar from '../NavBar/NavBar';
 import HitterVsPitcher from '../HitterVsPitcher';
+import PitcherTable from '../PitcherTable';
 
 const MainSection = ({ schedule }) => {
-    const [trigger, setTrigger] = useState(false);
+    const [hitterTrigger, setHitterTrigger] = useState(false);
+    const [pitcherTrigger, setPItcherTrigger] = useState(false);
     const [playerIds, setPlayerIds] = useState();
+    const [matchUps, setMatchUps] = useState([]);
     const [readyToPull, setReadyToPull] = useState(false);
 
-    const handleClick = () => {
-        setTrigger(true); // Toggle the trigger state
+    const handleHitterClick = () => {
+        setHitterTrigger(true);
+    };
+
+    const handlePitcherClick = () => {
+        setPItcherTrigger(true);
     };
 
     const pullPlayerIds = async () => {
@@ -48,23 +56,14 @@ const MainSection = ({ schedule }) => {
                                 let links = sibling.getElementsByTagName("a");
 
                                 for (let link of links) {
-                                    playerLinks.push(link.href);
-                                }
-
-                                // Remove duplicates from playerLinks and extract the values after "id/"
-                                const playerIds = Array.from(new Set(playerLinks))
-                                    .filter((href) =>
-                                        href.includes("https://www.espn.com/mlb/player/_/id/")
-                                    )
-                                    .map((href) => href.split("id/")[1]);
-
-                                if (positions[p] === 'Pitchers') {
-                                    for (let n = 0; n < playerIds.length; n++) {
-                                        pitcherIds.push(playerIds[n]);
-                                    }
-                                } else {
-                                    for (let h = 0; h < playerIds.length; h++) {
-                                        hitterIds.push(playerIds[h]);
+                                    if (link.text.length > 0 && link.href.includes("https://www.espn.com/mlb/player/_/id/")) {
+                                        const playerId = link.href.split("id/")[1];
+                                        const playerName = link.text;
+                                        if (positions[p] === 'Pitchers') {
+                                            pitcherIds.push({playerId: playerId, playerName: playerName});
+                                        } else {
+                                            hitterIds.push({playerId: playerId, playerName: playerName});
+                                        }
                                     }
                                 }
                             }
@@ -89,14 +88,103 @@ const MainSection = ({ schedule }) => {
 
     console.log('playerIds', playerIds);
 
+    useEffect(() => {
+        const MatchUpData = async () => {
+          if (schedule !== null) {
+            const newMatchUps = [];
+            var keys = Object.keys(schedule);
+            for (let n = 0; n < keys.length; n++) {
+              let homePitcher = null;
+              let homePitcherHand = null;
+              let awayPitcher = null;
+              let awayPitcherHand = null;
+              let homeTeam = null;
+              let awayTeam = null;
+              let homeTeamAbr = "";
+              let awayTeamAbr = "";
+              let homeTeamFullName = "";
+              let awayTeamFullName = "";
+              let homeLogo = "";
+              let awayLogo = "";
+              const homePitcherURL = schedule[keys[n]].competitors[0]?.probable?.href;
+              const homePitcherName = schedule[keys[n]].competitors[0]?.probable?.name;
+              if (homePitcherURL) {
+                const urlSplit = homePitcherURL.split("/id/");
+                homePitcher = urlSplit[1] ?? null;
+                const homePitcherData = await axios.get(
+                  `https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/${homePitcher}`
+                );
+                const batsThrows = homePitcherData.data.athlete.displayBatsThrows;
+                homePitcherHand = batsThrows.split('/')[1];
+              }
+              const awayPitcherURL = schedule[keys[n]].competitors[1]?.probable?.href;
+              const awayPitcherName = schedule[keys[n]].competitors[1]?.probable?.name;
+              if (awayPitcherURL) {
+                const urlSplit = awayPitcherURL.split("/id/");
+                awayPitcher = urlSplit[1] ?? null;
+                const awayPitcherData = await axios.get(
+                  `https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/${awayPitcher}`
+                );
+                const batsThrows = awayPitcherData.data.athlete.displayBatsThrows;
+                awayPitcherHand = batsThrows.split('/')[1];
+              }
+              homeTeam = schedule[keys[n]].competitors[0]?.id;
+              awayTeam = schedule[keys[n]].competitors[1]?.id;
+              homeTeamAbr = schedule[keys[n]].competitors[0]?.abbrev;
+              awayTeamAbr = schedule[keys[n]].competitors[1]?.abbrev;
+              homeTeamFullName = schedule[keys[n]].competitors[0]?.displayName;
+              awayTeamFullName = schedule[keys[n]].competitors[1]?.displayName;
+              homeLogo = schedule[keys[n]].competitors[0]?.logo;
+              awayLogo = schedule[keys[n]].competitors[1]?.logo;
+              const venue = schedule.venue?.fullName;
+              newMatchUps.push(
+                {
+                  pitcher: homePitcher,
+                  pitcherName: homePitcherName,
+                  pitcherThrows: homePitcherHand,
+                  team: awayTeam,
+                  batterLogo: awayLogo,
+                  pitcherLogo: homeLogo,
+                  batterTeam: awayTeamAbr,
+                  pitcherTeam: homeTeamAbr,
+                  batterTeamFullName: awayTeamFullName,
+                  pitcherTeamFullName: homeTeamFullName,
+                  isBatterHome: false,
+                  venue: venue,
+                },
+                {
+                  pitcher: awayPitcher,
+                  pitcherName: awayPitcherName,
+                  pitcherThrows: awayPitcherHand,
+                  team: homeTeam,
+                  batterLogo: homeLogo,
+                  pitcherLogo: awayLogo,
+                  batterTeam: homeTeamAbr,
+                  pitcherTeam: awayTeamAbr,
+                  batterTeamFullName: homeTeamFullName,
+                  pitcherTeamFullName: awayTeamFullName,
+                  isBatterHome: true,
+                  venue: venue,
+                }
+              );
+            }
+            setMatchUps(newMatchUps);
+            console.log("newMatchUps", newMatchUps);
+          }
+        }
+    
+        MatchUpData();
+      }, [schedule]);
+
     return (
         <div>
             <NavBar />
             <div className={css.mainMainSectionDiv}>
-                'Main Section'
-                <HitterVsPitcher schedule={schedule} generateTable={trigger} playerIds={playerIds} />
-                <button onClick={handleClick} disabled={!readyToPull}>Generate Table</button>
+                <button id={'hitter'} onClick={handleHitterClick} disabled={!readyToPull}>Generate Hitter Table</button>
+                <button id={'pitcher'} onClick={handlePitcherClick} disabled={!matchUps}>Generate Pitcher Table</button>
                 <button onClick={pullPlayerIds}>Pull Players</button>
+                <HitterVsPitcher matchUps={matchUps} generateTable={hitterTrigger} playerIds={playerIds} />
+                <PitcherTable matchUps={matchUps} generateTable={pitcherTrigger} />
             </div>
         </div>
     )
